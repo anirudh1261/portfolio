@@ -2,7 +2,7 @@
 
  # 🚀 Ganji Anirudh's Portfolio
 
-**A High-Performance Digital Identity built with the Modern Web Stack**
+**A High-Performance Digital Identity built with the Modern Web Sta**
 
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)

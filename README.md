@@ -1,6 +1,6 @@
 
 
- # 🚀 Ganji Anirudh's Portfol
+ # 🚀 Ganji Anirudh's Portfolio
 
 **A High-Performance Digital Identity built with the Modern Web Stack**
 

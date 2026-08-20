@@ -86,6 +86,8 @@ const GithubGraph = () => {
     };
 
     fetchStats();
+    const interval = setInterval(fetchStats, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [refreshKey]);
 
   const handleRefresh = () => {
@@ -144,7 +146,7 @@ const GithubGraph = () => {
         <GitHubCalendar
           key={refreshKey}
           username="anirudh1261"
-          year={new Date().getFullYear()}
+          year="last"
           colorScheme="light"
           showTotalCount={false}
           transformData={(data) => {

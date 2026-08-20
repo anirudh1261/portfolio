@@ -28,8 +28,8 @@ const FALLBACK_USER: CodeforcesUser = {
   maxRating: 1204,
   maxRank: 'specialist',
 };
-const FALLBACK_SOLVED = 13;
-const FALLBACK_SUBMISSIONS = 14;
+const FALLBACK_SOLVED = 37;
+const FALLBACK_SUBMISSIONS = 40;
 
 // allorigins.win acts as a CORS proxy — required because codeforces.com blocks browser requests
 const CF_PROXY = 'https://api.allorigins.win/get?url=';

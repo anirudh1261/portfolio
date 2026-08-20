@@ -3,13 +3,13 @@ import { Trophy, ExternalLink, Coins, Globe, Target } from 'lucide-react';
 // InterviewBit has no public API — stats are manually synced from the profile
 const displayData = {
   username: 'anirudh_968',
-  globalRank: 342087,
+  globalRank: 117775,
   universityRank: 1,
-  score: 733,
-  coins: 50,
-  solvedCount: 8,
+  score: 5460,
+  coins: 71,
+  solvedCount: 43,
   totalCount: 954,
-  streak: 0,
+  streak: 8,
   language: 'Python',
 };
 

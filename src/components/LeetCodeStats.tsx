@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Activity, ExternalLink } from 'lucide-react';
+import { Trophy, Activity, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface LeetCodeData {
   totalSolved: number;
@@ -13,42 +13,114 @@ interface LeetCodeData {
   ranking: number;
 }
 
+const FALLBACK_STATS: LeetCodeData = {
+  totalSolved: 195,
+  totalQuestions: 4029,
+  easySolved: 115,
+  totalEasy: 960,
+  mediumSolved: 63,
+  totalMedium: 2103,
+  hardSolved: 17,
+  totalHard: 966,
+  ranking: 866753,
+};
+
 const LeetCodeStats = () => {
   const [data, setData] = useState<LeetCodeData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStats = async () => {
+  const fetchStats = async () => {
+    setLoading(true);
+    let fetchedData: LeetCodeData | null = null;
+
+    // Endpoint 1: alfa-leetcode-api userProfile
+    try {
+      const response = await fetch(
+        'https://alfa-leetcode-api.onrender.com/userProfile/GANJI_ANIRUDH'
+      );
+      if (response.ok) {
+        const result = await response.json();
+        if (result && (result.totalSolved !== undefined || result.solvedProblem !== undefined)) {
+          fetchedData = {
+            totalSolved: result.totalSolved ?? result.solvedProblem ?? 195,
+            totalQuestions: result.totalQuestions ?? 4029,
+            easySolved: result.easySolved ?? 115,
+            totalEasy: result.totalEasy ?? 960,
+            mediumSolved: result.mediumSolved ?? 63,
+            totalMedium: result.totalMedium ?? 2103,
+            hardSolved: result.hardSolved ?? 17,
+            totalHard: result.totalHard ?? 966,
+            ranking: result.ranking ?? 866753,
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('Primary LeetCode API error, trying fallback endpoint...', error);
+    }
+
+    // Endpoint 2: alfa-leetcode-api solved route
+    if (!fetchedData) {
+      try {
+        const response = await fetch(
+          'https://alfa-leetcode-api.onrender.com/GANJI_ANIRUDH/solved'
+        );
+        if (response.ok) {
+          const result = await response.json();
+          if (result && (result.solvedProblem !== undefined || result.totalSolved !== undefined)) {
+            fetchedData = {
+              totalSolved: result.solvedProblem ?? result.totalSolved ?? 195,
+              totalQuestions: 4029,
+              easySolved: result.easySolved ?? 115,
+              totalEasy: 960,
+              mediumSolved: result.mediumSolved ?? 63,
+              totalMedium: 2103,
+              hardSolved: result.hardSolved ?? 17,
+              totalHard: 966,
+              ranking: 866753,
+            };
+          }
+        }
+      } catch (error) {
+        console.warn('Secondary LeetCode API error...', error);
+      }
+    }
+
+    // Endpoint 3: faisalshohag API
+    if (!fetchedData) {
       try {
         const response = await fetch(
           'https://leetcode-api-faisalshohag.vercel.app/GANJI_ANIRUDH'
         );
-        const result = await response.json();
-        if (result && result.totalSolved !== undefined) {
-          setData(result);
+        if (response.ok) {
+          const result = await response.json();
+          if (result && result.totalSolved !== undefined && !result.errors) {
+            fetchedData = {
+              totalSolved: result.totalSolved,
+              totalQuestions: result.totalQuestions ?? 4029,
+              easySolved: result.easySolved ?? 115,
+              totalEasy: result.totalEasy ?? 960,
+              mediumSolved: result.mediumSolved ?? 63,
+              totalMedium: result.totalMedium ?? 2103,
+              hardSolved: result.hardSolved ?? 17,
+              totalHard: result.totalHard ?? 966,
+              ranking: result.ranking ?? 866753,
+            };
+          }
         }
       } catch (error) {
-        console.error('Error fetching LeetCode stats:', error);
-      } finally {
-        setLoading(false);
+        console.warn('Tertiary LeetCode API error...', error);
       }
-    };
+    }
 
+    setData(fetchedData);
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchStats();
   }, []);
 
-  // Fallback data if API fails
-  const displayData = data || {
-    totalSolved: 81,
-    totalQuestions: 3878,
-    easySolved: 54,
-    totalEasy: 933,
-    mediumSolved: 21,
-    totalMedium: 2029,
-    hardSolved: 6,
-    totalHard: 916,
-    ranking: 1768887,
-  };
+  const displayData = data || FALLBACK_STATS;
 
   const StatBar = ({ 
     label, 
@@ -73,7 +145,7 @@ const LeetCodeStats = () => {
       <div className="h-2 w-full bg-black/5 border border-black/10 overflow-hidden relative">
         <div 
           className={`h-full ${color} transition-all duration-1000 ease-out border-r border-black`}
-          style={{ width: `${(solved / total) * 100}%` }}
+          style={{ width: `${Math.min((solved / total) * 100, 100)}%` }}
         />
       </div>
     </div>
@@ -93,15 +165,26 @@ const LeetCodeStats = () => {
             // @GANJI_ANIRUDH
           </p>
         </div>
-        <a 
-          href="https://leetcode.com/u/GANJI_ANIRUDH/" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
-          aria-label="View LeetCode Profile"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </a>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchStats}
+            disabled={loading}
+            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
+            title="Refresh Live Stats"
+            aria-label="Refresh Live Stats"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <a 
+            href="https://leetcode.com/u/GANJI_ANIRUDH/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
+            aria-label="View LeetCode Profile"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
@@ -109,14 +192,14 @@ const LeetCodeStats = () => {
         <div className="flex flex-col justify-center items-center p-4 bg-gradient-to-br from-[#FFA116]/10 to-[#FF6B35]/5 border-2 border-[#FFA116]/40 relative overflow-hidden group">
           <Trophy className="w-12 h-12 mb-2 text-[#FFA116]/20 absolute -top-2 -right-2 rotate-12 group-hover:scale-110 transition-transform" />
           <span className="text-4xl font-black font-mono leading-none text-[#FFA116] drop-shadow-[0_0_8px_rgba(255,161,22,0.4)]">
-            {displayData.totalSolved}
+            {loading ? '...' : displayData.totalSolved}
           </span>
           <span className="text-[10px] font-black uppercase tracking-[0.2em] mt-2 opacity-60">
             Solved
           </span>
           <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-white border border-[#FFA116]/50 text-[10px] font-mono">
             <Activity className="w-3 h-3 text-[#FFA116]" />
-            Rank: #{displayData.ranking.toLocaleString()}
+            Rank: #{loading ? '...' : displayData.ranking.toLocaleString()}
           </div>
         </div>
 
@@ -144,8 +227,13 @@ const LeetCodeStats = () => {
       </div>
 
       {!loading && !data && (
-        <div className="mt-4 text-[9px] font-mono text-center opacity-30 italic">
-          * Showing cached baseline stats
+        <div className="mt-4 text-[9px] font-mono text-center opacity-40 italic">
+          * Showing cached baseline stats (195 problems solved)
+        </div>
+      )}
+      {!loading && data && (
+        <div className="mt-4 text-[9px] font-mono text-center text-emerald-600 font-semibold">
+          • Live updated from LeetCode
         </div>
       )}
     </div>
@@ -153,3 +241,4 @@ const LeetCodeStats = () => {
 };
 
 export default LeetCodeStats;
+

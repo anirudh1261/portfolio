@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Award, ExternalLink, Globe, Star, RefreshCw } from 'lucide-react';
+import { Award, ExternalLink, Globe, Star } from 'lucide-react';
 
 interface CodeChefData {
   name: string;
@@ -21,51 +21,50 @@ const FALLBACK_DATA: CodeChefData = {
   stars: 'unrated',
 };
 
-const CODECHEF_API_URLS = [
-  'https://codechef-api.vercel.app/handle/anirudh_0334',
-  'https://codechef-api.vercel.app/anirudh_0334',
-];
+// allorigins.win CORS proxy — fetches CodeChef data through a server-side request
+const CC_PROXY = 'https://api.allorigins.win/get?url=';
+// We use the codechef-api.vercel.app scraper via proxy so it works from browser
+const CC_API_URL = encodeURIComponent('https://codechef-api.vercel.app/handle/anirudh_0334');
+const CC_API_URL_2 = encodeURIComponent('https://codechef-api.vercel.app/anirudh_0334');
+
+const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 const CodeChefStats = () => {
   const [data, setData] = useState<CodeChefData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLive, setIsLive] = useState(false);
 
   const fetchStats = async () => {
-    setLoading(true);
-    setIsLive(false);
-    let fetched = false;
+    let fetchedData: CodeChefData | null = null;
 
-    for (const url of CODECHEF_API_URLS) {
+    const endpoints = [CC_API_URL, CC_API_URL_2];
+    for (const ep of endpoints) {
       try {
-        const response = await fetch(url, { cache: 'no-store' });
-        if (response.ok) {
-          const result = await response.json();
+        const res = await fetch(`${CC_PROXY}${ep}`, { cache: 'no-store' });
+        if (res.ok) {
+          const wrapper = await res.json();
+          const result = JSON.parse(wrapper.contents);
           if (result && (result.success || result.numberOfProblemsSolved !== undefined)) {
-            setData(result);
-            setIsLive(true);
-            fetched = true;
+            fetchedData = result;
             break;
           }
         }
       } catch (err) {
-        console.warn(`CodeChef API ${url} failed:`, err);
+        console.warn('CodeChef API attempt failed:', err);
       }
     }
 
-    if (!fetched) {
-      console.warn('All CodeChef APIs unavailable — showing baseline stats.');
-    }
+    if (fetchedData) setData(fetchedData);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchStats();
+    const interval = setInterval(fetchStats, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   const displayData = data || FALLBACK_DATA;
 
-  // Parse progress percentage if name has format "Practice Python 14%"
   const progressMatch = displayData.name?.match(/(\d+)%/);
   const progressPercent = progressMatch ? parseInt(progressMatch[1], 10) : null;
 
@@ -73,7 +72,7 @@ const CodeChefStats = () => {
     label,
     solved,
     total,
-    color
+    color,
   }: {
     label: string;
     solved: number;
@@ -82,12 +81,8 @@ const CodeChefStats = () => {
   }) => (
     <div className="space-y-1">
       <div className="flex justify-between items-end px-1">
-        <span className="text-[9px] uppercase font-black tracking-wider opacity-60">
-          {label}
-        </span>
-        <span className="text-[10px] font-mono font-bold">
-          {solved}%
-        </span>
+        <span className="text-[9px] uppercase font-black tracking-wider opacity-60">{label}</span>
+        <span className="text-[10px] font-mono font-bold">{solved}%</span>
       </div>
       <div className="h-1.5 w-full bg-black/5 border border-black/10 overflow-hidden relative">
         <div
@@ -98,10 +93,8 @@ const CodeChefStats = () => {
     </div>
   );
 
-  const formatRank = (rank: number | null) => {
-    if (rank === null || rank === undefined) return 'N/A';
-    return `#${rank.toLocaleString()}`;
-  };
+  const formatRank = (rank: number | null) =>
+    rank === null || rank === undefined ? 'N/A' : `#${rank.toLocaleString()}`;
 
   return (
     <div className="border-4 border-black p-5 bg-white text-black hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 flex flex-col h-full relative overflow-hidden">
@@ -113,38 +106,23 @@ const CodeChefStats = () => {
           <h3 className="font-mono text-xl font-black uppercase tracking-tighter flex items-center gap-2">
             <span className="inline-block w-3 h-3 rounded-full bg-[#5B4636] shadow-[0_0_8px_#5B4636]"></span>
             CodeChef_
-            <span className={`text-[9px] font-normal px-1.5 py-0.5 border rounded-sm ${
-              isLive
-                ? 'bg-[#5B4636]/10 border-[#5B4636]/30 text-[#5B4636]'
-                : 'bg-gray-100 border-gray-300 text-gray-400'
-            }`}>
-              {isLive ? 'Live' : 'Cached'}
+            <span className="text-[9px] font-normal px-1.5 py-0.5 bg-[#5B4636]/10 border border-[#5B4636]/30 text-[#5B4636] rounded-sm">
+              Live
             </span>
           </h3>
           <p className="text-[10px] font-mono opacity-50 uppercase tracking-widest mt-1">
             // @anirudh_0334
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchStats}
-            disabled={loading}
-            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
-            title="Refresh Live Stats"
-            aria-label="Refresh CodeChef Stats"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <a
-            href="https://www.codechef.com/users/anirudh_0334"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
-            aria-label="View CodeChef Profile"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
+        <a
+          href="https://www.codechef.com/users/anirudh_0334"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
+          aria-label="View CodeChef Profile"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
@@ -166,22 +144,21 @@ const CodeChefStats = () => {
         {/* Right Side: Rating and ranks */}
         <div className="space-y-3 flex flex-col justify-center font-mono text-xs">
           {progressPercent !== null && (
-            <StatBar
-              label="Practice Progress"
-              solved={progressPercent}
-              total={100}
-              color="bg-amber-600"
-            />
+            <StatBar label="Practice Progress" solved={progressPercent} total={100} color="bg-amber-600" />
           )}
 
           <div className="pt-2 space-y-2 border-t border-black/10">
             <div className="flex justify-between items-center">
               <span className="opacity-60 uppercase text-[9px] font-black">Rating</span>
-              <span className="font-bold">{displayData.currentRating !== null ? displayData.currentRating : 'Unrated'}</span>
+              <span className="font-bold">
+                {displayData.currentRating !== null ? displayData.currentRating : 'Unrated'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="opacity-60 uppercase text-[9px] font-black">Highest Rating</span>
-              <span className="font-bold">{displayData.highestRating !== null ? displayData.highestRating : 'Unrated'}</span>
+              <span className="font-bold">
+                {displayData.highestRating !== null ? displayData.highestRating : 'Unrated'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="opacity-60 uppercase text-[9px] font-black flex items-center gap-1">
@@ -199,14 +176,9 @@ const CodeChefStats = () => {
         </div>
       </div>
 
-      {!loading && !isLive && (
+      {!loading && !data && (
         <div className="mt-4 text-[9px] font-mono text-center opacity-40 italic">
-          * No public CodeChef API — showing cached baseline stats
-        </div>
-      )}
-      {!loading && isLive && (
-        <div className="mt-4 text-[9px] font-mono text-center text-emerald-600 font-semibold">
-          • Live updated from CodeChef
+          * Showing cached baseline stats
         </div>
       )}
     </div>

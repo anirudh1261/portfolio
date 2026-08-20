@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Activity, ExternalLink, RefreshCw } from 'lucide-react';
+import { Trophy, Activity, ExternalLink } from 'lucide-react';
 
 interface LeetCodeData {
   totalSolved: number;
@@ -25,18 +25,20 @@ const FALLBACK_STATS: LeetCodeData = {
   ranking: 866753,
 };
 
+const POLL_INTERVAL_MS = 5 * 60 * 1000; // refresh every 5 minutes
+
 const LeetCodeStats = () => {
   const [data, setData] = useState<LeetCodeData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
-    setLoading(true);
     let fetchedData: LeetCodeData | null = null;
 
-    // Endpoint 1: alfa-leetcode-api userProfile
+    // Endpoint 1: alfa-leetcode-api userProfile (has CORS headers)
     try {
       const response = await fetch(
-        'https://alfa-leetcode-api.onrender.com/userProfile/GANJI_ANIRUDH'
+        'https://alfa-leetcode-api.onrender.com/userProfile/GANJI_ANIRUDH',
+        { cache: 'no-store' }
       );
       if (response.ok) {
         const result = await response.json();
@@ -55,14 +57,15 @@ const LeetCodeStats = () => {
         }
       }
     } catch (error) {
-      console.warn('Primary LeetCode API error, trying fallback endpoint...', error);
+      console.warn('Primary LeetCode API failed, trying fallback...', error);
     }
 
-    // Endpoint 2: alfa-leetcode-api solved route
+    // Endpoint 2: alfa-leetcode-api /solved route
     if (!fetchedData) {
       try {
         const response = await fetch(
-          'https://alfa-leetcode-api.onrender.com/GANJI_ANIRUDH/solved'
+          'https://alfa-leetcode-api.onrender.com/GANJI_ANIRUDH/solved',
+          { cache: 'no-store' }
         );
         if (response.ok) {
           const result = await response.json();
@@ -81,56 +84,31 @@ const LeetCodeStats = () => {
           }
         }
       } catch (error) {
-        console.warn('Secondary LeetCode API error...', error);
+        console.warn('Secondary LeetCode API failed...', error);
       }
     }
 
-    // Endpoint 3: faisalshohag API
-    if (!fetchedData) {
-      try {
-        const response = await fetch(
-          'https://leetcode-api-faisalshohag.vercel.app/GANJI_ANIRUDH'
-        );
-        if (response.ok) {
-          const result = await response.json();
-          if (result && result.totalSolved !== undefined && !result.errors) {
-            fetchedData = {
-              totalSolved: result.totalSolved,
-              totalQuestions: result.totalQuestions ?? 4029,
-              easySolved: result.easySolved ?? 115,
-              totalEasy: result.totalEasy ?? 960,
-              mediumSolved: result.mediumSolved ?? 63,
-              totalMedium: result.totalMedium ?? 2103,
-              hardSolved: result.hardSolved ?? 17,
-              totalHard: result.totalHard ?? 966,
-              ranking: result.ranking ?? 866753,
-            };
-          }
-        }
-      } catch (error) {
-        console.warn('Tertiary LeetCode API error...', error);
-      }
-    }
-
-    setData(fetchedData);
+    if (fetchedData) setData(fetchedData);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchStats();
+    const interval = setInterval(fetchStats, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, []);
 
   const displayData = data || FALLBACK_STATS;
 
-  const StatBar = ({ 
-    label, 
-    solved, 
-    total, 
-    color 
-  }: { 
-    label: string; 
-    solved: number; 
-    total: number; 
+  const StatBar = ({
+    label,
+    solved,
+    total,
+    color,
+  }: {
+    label: string;
+    solved: number;
+    total: number;
     color: string;
   }) => (
     <div className="space-y-1.5">
@@ -139,11 +117,13 @@ const LeetCodeStats = () => {
           {label}
         </span>
         <span className="text-xs font-mono font-bold">
-          {solved}<span className="text-[10px] opacity-30 mx-1">/</span>{total}
+          {solved}
+          <span className="text-[10px] opacity-30 mx-1">/</span>
+          {total}
         </span>
       </div>
       <div className="h-2 w-full bg-black/5 border border-black/10 overflow-hidden relative">
-        <div 
+        <div
           className={`h-full ${color} transition-all duration-1000 ease-out border-r border-black`}
           style={{ width: `${Math.min((solved / total) * 100, 100)}%` }}
         />
@@ -160,31 +140,23 @@ const LeetCodeStats = () => {
           <h3 className="font-mono text-xl font-black uppercase tracking-tighter flex items-center gap-2">
             <span className="inline-block w-3 h-3 rounded-full bg-[#FFA116] shadow-[0_0_8px_#FFA116]"></span>
             LeetCode Stats_
+            <span className="text-[9px] font-normal px-1.5 py-0.5 bg-[#FFA116]/10 border border-[#FFA116]/30 text-[#FFA116] rounded-sm">
+              Live
+            </span>
           </h3>
           <p className="text-[10px] font-mono opacity-50 uppercase tracking-widest mt-1">
             // @GANJI_ANIRUDH
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={fetchStats}
-            disabled={loading}
-            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
-            title="Refresh Live Stats"
-            aria-label="Refresh Live Stats"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <a 
-            href="https://leetcode.com/u/GANJI_ANIRUDH/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
-            aria-label="View LeetCode Profile"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
+        <a
+          href="https://leetcode.com/u/GANJI_ANIRUDH/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
+          aria-label="View LeetCode Profile"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
@@ -205,23 +177,23 @@ const LeetCodeStats = () => {
 
         {/* Right Side: Detailed Breakdown */}
         <div className="space-y-4">
-          <StatBar 
-            label="Easy" 
-            solved={displayData.easySolved} 
-            total={displayData.totalEasy} 
-            color="bg-emerald-400" 
+          <StatBar
+            label="Easy"
+            solved={displayData.easySolved}
+            total={displayData.totalEasy}
+            color="bg-emerald-400"
           />
-          <StatBar 
-            label="Med." 
-            solved={displayData.mediumSolved} 
-            total={displayData.totalMedium} 
-            color="bg-[#FFA116]" 
+          <StatBar
+            label="Med."
+            solved={displayData.mediumSolved}
+            total={displayData.totalMedium}
+            color="bg-[#FFA116]"
           />
-          <StatBar 
-            label="Hard" 
-            solved={displayData.hardSolved} 
-            total={displayData.totalHard} 
-            color="bg-rose-500" 
+          <StatBar
+            label="Hard"
+            solved={displayData.hardSolved}
+            total={displayData.totalHard}
+            color="bg-rose-500"
           />
         </div>
       </div>
@@ -231,14 +203,8 @@ const LeetCodeStats = () => {
           * Showing cached baseline stats (195 problems solved)
         </div>
       )}
-      {!loading && data && (
-        <div className="mt-4 text-[9px] font-mono text-center text-emerald-600 font-semibold">
-          • Live updated from LeetCode
-        </div>
-      )}
     </div>
   );
 };
 
 export default LeetCodeStats;
-

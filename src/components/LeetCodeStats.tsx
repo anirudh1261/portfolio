@@ -14,15 +14,15 @@ interface LeetCodeData {
 }
 
 const FALLBACK_STATS: LeetCodeData = {
-  totalSolved: 195,
-  totalQuestions: 4029,
-  easySolved: 115,
-  totalEasy: 960,
-  mediumSolved: 63,
-  totalMedium: 2103,
-  hardSolved: 17,
-  totalHard: 966,
-  ranking: 866753,
+  totalSolved: 201,
+  totalQuestions: 4033,
+  easySolved: 117,
+  totalEasy: 961,
+  mediumSolved: 65,
+  totalMedium: 2105,
+  hardSolved: 19,
+  totalHard: 967,
+  ranking: 842766,
 };
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // refresh every 5 minutes
@@ -32,27 +32,29 @@ const LeetCodeStats = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     let fetchedData: LeetCodeData | null = null;
 
     // Endpoint 1: alfa-leetcode-api userProfile (has CORS headers)
     try {
       const response = await fetch(
         'https://alfa-leetcode-api.onrender.com/userProfile/GANJI_ANIRUDH',
-        { cache: 'no-store' }
+        { cache: 'no-store', signal: controller.signal }
       );
       if (response.ok) {
         const result = await response.json();
         if (result && (result.totalSolved !== undefined || result.solvedProblem !== undefined)) {
           fetchedData = {
-            totalSolved: result.totalSolved ?? result.solvedProblem ?? 195,
-            totalQuestions: result.totalQuestions ?? 4029,
-            easySolved: result.easySolved ?? 115,
-            totalEasy: result.totalEasy ?? 960,
-            mediumSolved: result.mediumSolved ?? 63,
-            totalMedium: result.totalMedium ?? 2103,
-            hardSolved: result.hardSolved ?? 17,
-            totalHard: result.totalHard ?? 966,
-            ranking: result.ranking ?? 866753,
+            totalSolved: result.totalSolved ?? result.solvedProblem ?? 201,
+            totalQuestions: result.totalQuestions ?? 4033,
+            easySolved: result.easySolved ?? 117,
+            totalEasy: result.totalEasy ?? 961,
+            mediumSolved: result.mediumSolved ?? 65,
+            totalMedium: result.totalMedium ?? 2105,
+            hardSolved: result.hardSolved ?? 19,
+            totalHard: result.totalHard ?? 967,
+            ranking: result.ranking ?? 842766,
           };
         }
       }
@@ -65,21 +67,21 @@ const LeetCodeStats = () => {
       try {
         const response = await fetch(
           'https://alfa-leetcode-api.onrender.com/GANJI_ANIRUDH/solved',
-          { cache: 'no-store' }
+          { cache: 'no-store', signal: controller.signal }
         );
         if (response.ok) {
           const result = await response.json();
           if (result && (result.solvedProblem !== undefined || result.totalSolved !== undefined)) {
             fetchedData = {
-              totalSolved: result.solvedProblem ?? result.totalSolved ?? 195,
-              totalQuestions: 4029,
-              easySolved: result.easySolved ?? 115,
-              totalEasy: 960,
-              mediumSolved: result.mediumSolved ?? 63,
-              totalMedium: 2103,
-              hardSolved: result.hardSolved ?? 17,
-              totalHard: 966,
-              ranking: 866753,
+              totalSolved: result.solvedProblem ?? result.totalSolved ?? 201,
+              totalQuestions: 4033,
+              easySolved: result.easySolved ?? 117,
+              totalEasy: 961,
+              mediumSolved: result.mediumSolved ?? 65,
+              totalMedium: 2105,
+              hardSolved: result.hardSolved ?? 19,
+              totalHard: 967,
+              ranking: 842766,
             };
           }
         }
@@ -89,6 +91,7 @@ const LeetCodeStats = () => {
     }
 
     if (fetchedData) setData(fetchedData);
+    clearTimeout(timeoutId);
     setLoading(false);
   };
 
@@ -200,7 +203,7 @@ const LeetCodeStats = () => {
 
       {!loading && !data && (
         <div className="mt-4 text-[9px] font-mono text-center opacity-40 italic">
-          * Showing cached baseline stats (195 problems solved)
+          * Showing cached baseline stats (201 problems solved)
         </div>
       )}
     </div>

@@ -28,13 +28,12 @@ const FALLBACK_USER: CodeforcesUser = {
   maxRating: 1204,
   maxRank: 'specialist',
 };
-const FALLBACK_SOLVED = 37;
-const FALLBACK_SUBMISSIONS = 40;
+const FALLBACK_SOLVED = 52;
+const FALLBACK_SUBMISSIONS = 60;
 
-// allorigins.win acts as a CORS proxy — required because codeforces.com blocks browser requests
+const DIRECT_INFO_URL = 'https://codeforces.com/api/user.info?handles=anirudh.ganji15';
+const DIRECT_STATUS_URL = 'https://codeforces.com/api/user.status?handle=anirudh.ganji15&from=1&count=1000';
 const CF_PROXY = 'https://api.allorigins.win/get?url=';
-const CF_INFO_URL = encodeURIComponent('https://codeforces.com/api/user.info?handles=anirudh.ganji15');
-const CF_STATUS_URL = encodeURIComponent('https://codeforces.com/api/user.status?handle=anirudh.ganji15&from=1&count=1000');
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -45,39 +44,61 @@ const CodeforcesStats = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
-    try {
-      const [infoRes, statusRes] = await Promise.all([
-        fetch(`${CF_PROXY}${CF_INFO_URL}`, { cache: 'no-store' }),
-        fetch(`${CF_PROXY}${CF_STATUS_URL}`, { cache: 'no-store' }),
-      ]);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-      if (infoRes.ok) {
-        const infoWrapper = await infoRes.json();
-        const infoResult = JSON.parse(infoWrapper.contents);
-        if (infoResult?.status === 'OK' && infoResult.result?.[0]) {
-          setUserInfo(infoResult.result[0]);
+    try {
+      // 1. Try direct fetch first (Codeforces API has native CORS headers)
+      let infoResult: any = null;
+      let statusResult: any = null;
+
+      try {
+        const [infoRes, statusRes] = await Promise.all([
+          fetch(DIRECT_INFO_URL, { cache: 'no-store', signal: controller.signal }),
+          fetch(DIRECT_STATUS_URL, { cache: 'no-store', signal: controller.signal }),
+        ]);
+
+        if (infoRes.ok) infoResult = await infoRes.json();
+        if (statusRes.ok) statusResult = await statusRes.json();
+      } catch {
+        // Fall back to allorigins CORS proxy if direct fetch failed
+        const infoUrlEncoded = encodeURIComponent(DIRECT_INFO_URL);
+        const statusUrlEncoded = encodeURIComponent(DIRECT_STATUS_URL);
+        const [infoRes, statusRes] = await Promise.all([
+          fetch(`${CF_PROXY}${infoUrlEncoded}`, { cache: 'no-store', signal: controller.signal }),
+          fetch(`${CF_PROXY}${statusUrlEncoded}`, { cache: 'no-store', signal: controller.signal }),
+        ]);
+
+        if (infoRes.ok) {
+          const wrapper = await infoRes.json();
+          infoResult = JSON.parse(wrapper.contents);
+        }
+        if (statusRes.ok) {
+          const wrapper = await statusRes.json();
+          statusResult = JSON.parse(wrapper.contents);
         }
       }
 
-      if (statusRes.ok) {
-        const statusWrapper = await statusRes.json();
-        const statusResult = JSON.parse(statusWrapper.contents);
-        if (statusResult?.status === 'OK' && statusResult.result) {
-          const uniqueSolved = new Set<string>();
-          statusResult.result.forEach(
-            (sub: { verdict: string; problem?: { contestId: number; index: string } }) => {
-              if (sub.verdict === 'OK' && sub.problem) {
-                uniqueSolved.add(`${sub.problem.contestId}-${sub.problem.index}`);
-              }
+      if (infoResult?.status === 'OK' && infoResult.result?.[0]) {
+        setUserInfo(infoResult.result[0]);
+      }
+
+      if (statusResult?.status === 'OK' && Array.isArray(statusResult.result)) {
+        const uniqueSolved = new Set<string>();
+        statusResult.result.forEach(
+          (sub: { verdict: string; problem?: { contestId: number; index: string } }) => {
+            if (sub.verdict === 'OK' && sub.problem) {
+              uniqueSolved.add(`${sub.problem.contestId}-${sub.problem.index}`);
             }
-          );
-          setSolvedCount(Math.max(37, uniqueSolved.size));
-          setTotalSubmissions(Math.max(37, statusResult.result.length));
-        }
+          }
+        );
+        setSolvedCount(Math.max(FALLBACK_SOLVED, uniqueSolved.size));
+        setTotalSubmissions(Math.max(FALLBACK_SUBMISSIONS, statusResult.result.length));
       }
     } catch (error) {
-      console.warn('Codeforces fetch failed, using fallback.', error);
+      console.warn('Codeforces fetch failed, using baseline stats.', error);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };

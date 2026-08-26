@@ -15,17 +15,16 @@ const FALLBACK_DATA: CodeChefData = {
   name: 'anirudh_0334',
   currentRating: null,
   highestRating: null,
-  numberOfProblemsSolved: 110,
+  numberOfProblemsSolved: 120,
   globalRank: null,
   countryRank: null,
   stars: 'unrated',
 };
 
-// allorigins.win CORS proxy — fetches CodeChef data through a server-side request
-const CC_PROXY = 'https://api.allorigins.win/get?url=';
-// We use the codechef-api.vercel.app scraper via proxy so it works from browser
-const CC_API_URL = encodeURIComponent('https://codechef-api.vercel.app/handle/anirudh_0334');
-const CC_API_URL_2 = encodeURIComponent('https://codechef-api.vercel.app/anirudh_0334');
+// Endpoints for fetching CodeChef stats
+const CC_ENDPOINTS = [
+  'https://cp-rating-api.vercel.app/codechef/anirudh_0334',
+];
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -34,17 +33,25 @@ const CodeChefStats = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
     let fetchedData: CodeChefData | null = null;
 
-    const endpoints = [CC_API_URL, CC_API_URL_2];
-    for (const ep of endpoints) {
+    for (const ep of CC_ENDPOINTS) {
       try {
-        const res = await fetch(`${CC_PROXY}${ep}`, { cache: 'no-store' });
+        const res = await fetch(ep, { cache: 'no-store', signal: controller.signal });
         if (res.ok) {
-          const wrapper = await res.json();
-          const result = JSON.parse(wrapper.contents);
-          if (result && (result.success || result.numberOfProblemsSolved !== undefined)) {
-            fetchedData = result;
+          const result = await res.json();
+          if (result && (result.numberOfProblemsSolved !== undefined || result.username || result.rating !== undefined)) {
+            fetchedData = {
+              name: result.username || 'anirudh_0334',
+              currentRating: result.currentRating ?? (result.rating ? parseInt(result.rating, 10) : null),
+              highestRating: result.highestRating ?? null,
+              numberOfProblemsSolved: result.numberOfProblemsSolved ?? result.solvedProblems ?? 120,
+              globalRank: result.globalRank ?? null,
+              countryRank: result.countryRank ?? null,
+              stars: result.stars ? (typeof result.stars === 'number' ? `${result.stars}★` : String(result.stars)) : 'unrated',
+            };
             break;
           }
         }
@@ -53,7 +60,10 @@ const CodeChefStats = () => {
       }
     }
 
-    if (fetchedData) setData(fetchedData);
+    if (fetchedData) {
+      setData(fetchedData);
+    }
+    clearTimeout(timeoutId);
     setLoading(false);
   };
 

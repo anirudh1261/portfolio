@@ -159,7 +159,7 @@ const Index = () => {
         "name": "Ganji Anirudh Profile Page",
         "description": "Official profile page of Ganji Anirudh, showcasing academic credentials, skills, competitive programming stats, and projects.",
         "datePublished": "2024-08-01",
-        "dateModified": "2026-07-21",
+        "dateModified": "2026-08-26",
         "mainEntity": {
           "@id": "https://ganji-anirudh.vercel.app/#person"
         },
@@ -184,7 +184,7 @@ const Index = () => {
         },
         "inLanguage": "en-IN",
         "datePublished": "2024-08-01",
-        "dateModified": "2026-07-21"
+        "dateModified": "2026-08-26"
       },
       {
         "@type": "BreadcrumbList",

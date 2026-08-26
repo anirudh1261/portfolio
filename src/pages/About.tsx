@@ -50,7 +50,7 @@ const aboutSchema = {
       },
       "inLanguage": "en-IN",
       "datePublished": "2026-07-01",
-      "dateModified": "2026-07-21",
+      "dateModified": "2026-08-26",
       "breadcrumb": {
         "@type": "BreadcrumbList",
         "itemListElement": [
